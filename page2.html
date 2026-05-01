@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Page B, SharedWorker demo</title>
+    <style>
+      :root { --accent: #e2734a; }
+      * { box-sizing: border-box; }
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: clamp(1rem, 4vw, 2rem);
+        max-width: 600px;
+      }
+      h1 { font-size: clamp(1.5rem, 5vw, 2rem); margin: 0 0 1rem; }
+      .card {
+        padding: clamp(1rem, 4vw, 1.5rem);
+        border: 2px solid var(--accent);
+        border-radius: 8px;
+        width: 100%;
+      }
+      .value {
+        font-size: clamp(2.5rem, 12vw, 3rem);
+        font-weight: bold;
+        color: var(--accent);
+        line-height: 1.1;
+      }
+      .meta { color: #666; font-size: 0.9rem; }
+      a { color: var(--accent); display: inline-block; padding: 0.5rem 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Page B</h1>
+    <div class="card">
+      <div>Counter from shared worker:</div>
+      <div class="value" id="value">—</div>
+      <div class="meta" id="meta">connecting…</div>
+    </div>
+    <p><a href="index.html" target="_blank">Open Page A in a new tab →</a></p>
+    <script>
+      const valueEl = document.getElementById("value");
+      const metaEl = document.getElementById("meta");
+
+      const worker = new SharedWorker("worker.js", { name: "counter" });
+      worker.port.onmessage = (e) => {
+        const msg = e.data;
+        if (msg.type === "hello" || msg.type === "tick") valueEl.textContent = msg.value;
+        if (msg.subscribers !== undefined) metaEl.textContent = `subscribers: ${msg.subscribers}`;
+      };
+      worker.port.start();
+
+      window.addEventListener("beforeunload", () => {
+        worker.port.postMessage({ type: "bye" });
+      });
+    </script>
+  </body>
+</html>
