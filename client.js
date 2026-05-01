@@ -24,10 +24,17 @@ worker.port.onmessage = (e) => {
 // Without this, messages from the worker would queue up and never fire.
 worker.port.start();
 
+// Heartbeat so the worker can detect dead pages it never got a "bye" from
+// (tab crash, force-quit, OS killing a backgrounded mobile tab). The worker
+// prunes ports it has not heard from in ~15s.
+setInterval(() => worker.port.postMessage({ type: "ping" }), 5_000);
+
 // Best-effort "I am leaving" signal so the worker can decrement its subscriber
-// count. Not reliable on tab crash, force-quit, or mobile background-kill, but
-// good enough for a demo. The worker itself is torn down by the browser once
-// the last page disconnects, regardless of whether "bye" was received.
-window.addEventListener("beforeunload", () => {
+// count immediately rather than waiting for the heartbeat to time out. Listen
+// to both events: `pagehide` fires more reliably on mobile and with bfcache,
+// `beforeunload` covers some desktop cases the former misses.
+function sayBye() {
   worker.port.postMessage({ type: "bye" });
-});
+}
+window.addEventListener("pagehide", sayBye);
+window.addEventListener("beforeunload", sayBye);
